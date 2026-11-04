@@ -1,0 +1,3 @@
+# Serve the training site folder as the site root, so the homepage loads at "/".
+[build]
+  publish = "tutorial-site"
