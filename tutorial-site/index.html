@@ -1,0 +1,467 @@
+<title>Pickup and Delivery Training</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@700&family=Roboto+Mono:wght@500&family=Roboto:wght@400;500;700&display=swap">
+<style>
+/* Layout: the indigo app bar from Virtual Post, then Post Command's shape: a playlist sidebar on the left, the player and its details on the right. Phones stack player, details, playlist.
+   Single light theme on purpose: it matches the Ethiopost apps staff use at their desks. Colours are sampled from the recordings. */
+:root {
+  color-scheme: light;
+  --indigo: #2c2976;
+  --indigo-soft: #cfcdf0;
+  --gold: #eeb00a;
+  --gold-soft: #fef5e4;
+  --gold-line: #f3d48a;
+  --bg: #f0f4f7;
+  --surface: #ffffff;
+  --hover: #f5f7fa;
+  --line: #e1e6ec;
+  --ink: #1d1c30;
+  --muted: #566074;
+  --direct-ink: #13689f;
+  --direct-bg: #eaf5fc;
+  --hub-ink: #3b318f;
+  --hub-bg: #efedf8;
+  --stage: #100f26;
+  --danger: #b42318;
+  --font-ui: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-head: "Noto Serif", Georgia, "Times New Roman", serif;
+  --font-data: "Roboto Mono", ui-monospace, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 1rem/1.55 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+::selection { background: #fbe3a1; color: var(--ink); }
+:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; border-radius: 6px; }
+
+.gutter {
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+}
+
+/* App bar */
+.bar { background: var(--indigo); color: #ffffff; }
+.bar .gutter { padding-block: 28px 30px; }
+.bar h1 {
+  margin: 0;
+  font: 700 2rem/1.15 var(--font-head);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.bar p { margin: 8px 0 0; color: var(--indigo-soft); max-width: 70ch; }
+
+/* Shell */
+.shell {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-areas: "nav main" "nav legend";
+  grid-template-rows: auto 1fr;
+  gap: 16px 24px;
+  align-items: start;
+  padding-block: 24px 16px;
+}
+.windows { grid-area: legend; min-width: 0; }
+.main { grid-area: main; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.playlist { grid-area: nav; min-width: 0; position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+/* Player */
+.player {
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+  background: var(--stage);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.player video { display: block; width: 100%; height: 100%; object-fit: contain; background: var(--stage); }
+.status { margin: 0; color: var(--danger); font-weight: 500; }
+.status:empty { display: none; }
+
+/* Now playing */
+.now { padding: 22px 24px 24px; }
+.now-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px 32px; }
+.now-head > div:first-child { min-width: 0; flex: 1 1 360px; }
+.now h2 { margin: 0; font: 700 1.5rem/1.25 var(--font-head); text-wrap: balance; }
+.now-meta { margin: 10px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; color: var(--muted); font-size: 0.9375rem; }
+.now-meta > span + span::before { content: "\00b7"; margin: 0 10px; color: var(--muted); }
+.now-meta .chip + span::before { content: none; }
+.now-meta .chip { margin-right: 10px; }
+.now-order { margin: 6px 0 0; color: var(--muted); font-size: 0.9375rem; }
+.mono { font: 500 0.875rem/1 var(--font-data); color: var(--ink); }
+
+.chip {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font: 700 0.75rem/1.4 var(--font-ui);
+  letter-spacing: 0.04em;
+}
+.chip-direct { color: var(--direct-ink); background: var(--direct-bg); }
+.chip-hub { color: var(--hub-ink); background: var(--hub-bg); }
+
+.speed { display: flex; align-items: center; gap: 10px; }
+.speed-label { font-size: 0.875rem; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button {
+  font: 500 0.875rem/1 var(--font-ui);
+  padding: 9px 12px;
+  min-width: 52px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease-out, color 0.15s ease-out;
+}
+.seg button:first-child { border-left: 0; }
+.seg button:hover { background: var(--hover); }
+.seg button[aria-pressed="true"] { background: var(--indigo); color: #ffffff; }
+.seg button:focus-visible { outline-offset: -3px; border-radius: 0; }
+
+/* Steps, drawn like the Order Status timeline in Virtual Post */
+.steps { list-style: none; margin: 22px 0 0; padding: 0; max-width: 75ch; }
+.steps li { position: relative; padding: 0 0 16px 30px; }
+.steps li:last-child { padding-bottom: 0; }
+.steps li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--gold);
+}
+.steps li::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 22px;
+  bottom: 2px;
+  width: 2px;
+  background: var(--line);
+}
+.steps li:last-child::after { content: none; }
+
+/* Windows legend */
+.windows { padding: 20px 24px 22px; }
+.windows h2 { margin: 0; font: 700 1.125rem/1.3 var(--font-head); }
+.windows > p { margin: 6px 0 0; color: var(--muted); max-width: 75ch; }
+.win-list { margin: 16px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.win-list > div { min-width: 0; padding: 0 20px; border-left: 1px solid var(--line); }
+.win-list > div:first-child { padding-left: 0; border-left: 0; }
+.win-list dt { font-weight: 700; }
+.win-list dt span { font-weight: 400; color: var(--muted); }
+.win-list dd { margin: 4px 0 0; color: var(--muted); font-size: 0.9375rem; }
+
+/* Playlist, shaped like the Post Command sidebar */
+.playlist { padding: 18px 12px 12px; display: flex; flex-direction: column; gap: 20px; }
+.group-head { padding: 0 8px; }
+.group-head h2 { margin: 0; font: 700 1.0625rem/1.3 var(--font-head); }
+.group-head p { margin: 4px 0 0; font-size: 0.875rem; color: var(--muted); }
+.group-head .code { font: 500 0.8125rem/1 var(--font-data); color: var(--ink); }
+.items { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color 0.15s ease-out;
+}
+.item:hover { background: var(--hover); }
+.item[aria-current="true"] { background: var(--gold-soft); }
+.num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font: 500 0.875rem/1 var(--font-ui);
+  color: var(--muted);
+}
+.item[aria-current="true"] .num { background: var(--gold); border-color: var(--gold); color: var(--ink); }
+.item-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.item-title { font-weight: 500; line-height: 1.35; }
+.item[aria-current="true"] .item-title { font-weight: 700; }
+.item-meta { font-size: 0.8125rem; color: var(--muted); }
+
+.foot { padding-block: 8px 40px; font-size: 0.8125rem; color: var(--muted); }
+
+@media (max-width: 960px) {
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "nav" "legend"; grid-template-rows: none; }
+  .playlist { position: static; }
+}
+@media (max-width: 720px) {
+  .win-list { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .win-list > div { padding: 14px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .win-list > div:first-child { padding-top: 0; border-top: 0; }
+}
+@media (max-width: 520px) {
+  .gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .bar .gutter { padding-block: 22px 24px; }
+  .bar h1 { font-size: 1.625rem; }
+  .shell { padding-top: 16px; gap: 16px; }
+  .player { border-radius: 8px; }
+  .now, .windows { padding-left: 16px; padding-right: 16px; }
+  .now h2 { font-size: 1.3125rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .item, .seg button { transition: none; }
+}
+</style>
+
+<header class="bar">
+  <div class="gutter">
+    <h1>Pickup and Delivery Training</h1>
+    <p>For Ethiopost staff. Four screen recordings, 28 minutes in total, following real orders through Post Command, the Courier Web App and Virtual Post.</p>
+  </div>
+</header>
+
+<div class="gutter shell">
+  <main class="main">
+    <div class="player">
+      <video id="video" controls playsinline preload="metadata" src="media/part1.mp4" poster="media/part1.jpg"></video>
+    </div>
+    <p class="status" id="status" role="status"></p>
+
+    <section class="panel now" aria-labelledby="now-title">
+      <div class="now-head">
+        <div>
+          <h2 id="now-title">Direct delivery, from order to drop-off</h2>
+          <p class="now-meta">
+            <span class="chip chip-direct" id="now-code">DIRECT</span>
+            <span id="now-option">Express Delivery</span>
+            <span id="now-dur">6:21</span>
+          </p>
+          <p class="now-order">Order shown: <span class="mono" id="now-order">EXGEN2600000RT</span></p>
+        </div>
+        <div class="speed">
+          <span class="speed-label" id="speed-label">Speed</span>
+          <div class="seg" role="group" aria-labelledby="speed-label">
+            <button type="button" id="rate-1" data-rate="1" aria-pressed="true">1&times;</button>
+            <button type="button" id="rate-125" data-rate="1.25" aria-pressed="false">1.25&times;</button>
+            <button type="button" id="rate-15" data-rate="1.5" aria-pressed="false">1.5&times;</button>
+          </div>
+        </div>
+      </div>
+      <ol class="steps" id="now-steps" aria-label="What happens in this part">
+        <li>The customer starts a Pickup Order, says whether they are sending or receiving, and chooses Express Delivery.</li>
+        <li>The order is reviewed on the map and paid through Chapa, and a receipt appears.</li>
+        <li>Post Command lists the order under Delivery, Orders, where staff follow its status.</li>
+        <li>The courier opens the trip, weighs the parcel, can report damage, and completes the handoff.</li>
+      </ol>
+    </section>
+  </main>
+
+  <nav class="panel playlist" aria-label="Training videos">
+    <section aria-labelledby="group-direct">
+      <div class="group-head">
+        <h2 id="group-direct">Direct</h2>
+        <p>Express Delivery. One courier takes the parcel from the sender to the recipient. Post Command shows these as <span class="code">DIRECT</span>.</p>
+      </div>
+      <ol class="items">
+        <li>
+          <a class="item" href="#part-1" data-index="0" aria-current="true">
+            <span class="num">1</span>
+            <span class="item-text"><span class="item-title">Direct delivery, from order to drop-off</span><span class="item-meta">Express &middot; 6:21</span></span>
+          </a>
+        </li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="group-hub">
+      <div class="group-head">
+        <h2 id="group-hub">Hubrouted</h2>
+        <p>Next-Day and Same-Day Delivery. The parcel passes through a hub, such as the GPO hub, and changes couriers on the way. Post Command shows these as <span class="code">HUB_ROUTED</span>.</p>
+      </div>
+      <ol class="items" start="2">
+        <li>
+          <a class="item" href="#part-2" data-index="1">
+            <span class="num">2</span>
+            <span class="item-text"><span class="item-title">Hubrouted Delivery</span><span class="item-meta">Next-Day &middot; 11:15</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="item" href="#part-3" data-index="2">
+            <span class="num">3</span>
+            <span class="item-text"><span class="item-title">Hubrouted Delivery with Weight Discrepancy</span><span class="item-meta">Next-Day &middot; 6:20</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="item" href="#part-4" data-index="3">
+            <span class="num">4</span>
+            <span class="item-text"><span class="item-title">Hubrouted Delivery with ID Verification</span><span class="item-meta">Next-Day &middot; 4:20</span></span>
+          </a>
+        </li>
+      </ol>
+    </section>
+  </nav>
+
+  <section class="panel windows" aria-labelledby="windows-title">
+    <h2 id="windows-title">The three windows on screen</h2>
+    <p>Every recording shows the same three apps side by side. Switch the player to full screen if the text looks small.</p>
+    <dl class="win-list">
+      <div><dt>Post Command <span>(left)</span></dt><dd>The operations workspace for staff: orders, dispatch, handoffs, held parcels and the live map.</dd></div>
+      <div><dt>Courier Web App <span>(middle)</span></dt><dd>Where a courier sees their trips, enters handoff codes and shows deposit QR codes.</dd></div>
+      <div><dt>Virtual Post <span>(right)</span></dt><dd>The customer app for placing a pickup order, paying and tracking the parcel.</dd></div>
+    </dl>
+  </section>
+</div>
+
+<footer class="gutter foot">Recorded 3 November 2026 on VPS v0.0.7</footer>
+
+<script>
+(function () {
+  var PARTS = [
+    {
+      src: "media/part1.mp4", poster: "media/part1.jpg", dur: "6:21",
+      code: "DIRECT", option: "Express Delivery", order: "EXGEN2600000RT",
+      title: "Direct delivery, from order to drop-off",
+      steps: [
+        "The customer starts a Pickup Order, says whether they are sending or receiving, and chooses Express Delivery.",
+        "The order is reviewed on the map and paid through Chapa, and a receipt appears.",
+        "Post Command lists the order under Delivery, Orders, where staff follow its status.",
+        "The courier opens the trip, weighs the parcel, can report damage, and completes the handoff."
+      ]
+    },
+    {
+      src: "media/part2.mp4", poster: "media/part2.jpg", dur: "11:15",
+      code: "HUB_ROUTED", option: "Next-Day Delivery", order: "NDGEN2600000JA",
+      title: "Hubrouted Delivery",
+      steps: [
+        "A Next-Day Delivery order is placed and paid. The receipt itemises the weight price and the Chapa service fee.",
+        "The courier picks up the parcel and the app prepares a deposit QR code for the GPO hub, with a countdown.",
+        "The Handoffs page in Post Command shows each custody handoff as it happens.",
+        "A courier enters a handoff code under Your Trips to take the parcel on to the next leg."
+      ]
+    },
+    {
+      src: "media/part3.mp4", poster: "media/part3.jpg", dur: "6:20",
+      code: "HUB_ROUTED", option: "Next-Day Delivery", order: "NDGEN2600000K8",
+      title: "Hubrouted Delivery with Weight Discrepancy",
+      steps: [
+        "Another Next-Day order goes through pickup and a deposit at the GPO hub.",
+        "When the parcel weighs more than the customer paid for, the customer pays the difference and the order records it.",
+        "The customer's order page lists every status update and lets them send the parcel back before it is delivered.",
+        "Delivery is confirmed with a verification code and the order ends as Delivered."
+      ]
+    },
+    {
+      src: "media/part4.mp4", poster: "media/part4.jpg", dur: "4:20",
+      code: "HUB_ROUTED", option: "Next-Day Delivery", order: "NDGEN2600000N2",
+      title: "Hubrouted Delivery with ID Verification",
+      steps: [
+        "The pickup courier hands the parcel over at the GPO hub with a deposit QR code.",
+        "In Post Command, staff accept the handoff and assign a courier for the delivery leg.",
+        "The hub gives a release code, which the delivery courier enters under Your Trips.",
+        "At the door the courier confirms delivery with a photo, an ID check and the recipient's signature, and the order timeline records each step."
+      ]
+    }
+  ];
+
+  var video = document.getElementById("video");
+  var statusEl = document.getElementById("status");
+  var titleEl = document.getElementById("now-title");
+  var codeEl = document.getElementById("now-code");
+  var optionEl = document.getElementById("now-option");
+  var durEl = document.getElementById("now-dur");
+  var orderEl = document.getElementById("now-order");
+  var stepsEl = document.getElementById("now-steps");
+  var items = Array.prototype.slice.call(document.querySelectorAll(".item"));
+  var rateButtons = Array.prototype.slice.call(document.querySelectorAll(".seg button"));
+  var current = 0;
+  var rate = 1;
+
+  function show(index, autoplay) {
+    if (index < 0 || index >= PARTS.length) { return; }
+    var p = PARTS[index];
+    if (index !== current || video.getAttribute("src") !== p.src) {
+      current = index;
+      statusEl.textContent = "";
+      video.poster = p.poster;
+      video.src = p.src;
+      video.defaultPlaybackRate = rate;
+      video.playbackRate = rate;
+    }
+    titleEl.textContent = p.title;
+    codeEl.textContent = p.code;
+    codeEl.className = "chip " + (p.code === "DIRECT" ? "chip-direct" : "chip-hub");
+    optionEl.textContent = p.option;
+    durEl.textContent = p.dur;
+    orderEl.textContent = p.order;
+    stepsEl.textContent = "";
+    p.steps.forEach(function (text) {
+      var li = document.createElement("li");
+      li.textContent = text;
+      stepsEl.appendChild(li);
+    });
+    items.forEach(function (item, i) {
+      if (i === index) { item.setAttribute("aria-current", "true"); }
+      else { item.removeAttribute("aria-current"); }
+    });
+    if (autoplay) {
+      var result = video.play();
+      if (result && result.catch) { result.catch(function () {}); }
+    }
+  }
+
+  items.forEach(function (item) {
+    item.addEventListener("click", function (event) {
+      event.preventDefault();
+      show(Number(item.getAttribute("data-index")), true);
+      var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var rect = video.getBoundingClientRect();
+      if (rect.top < 0 || rect.bottom > window.innerHeight) {
+        video.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      }
+    });
+  });
+
+  rateButtons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      rate = Number(button.getAttribute("data-rate"));
+      video.defaultPlaybackRate = rate;
+      video.playbackRate = rate;
+      rateButtons.forEach(function (other) {
+        other.setAttribute("aria-pressed", other === button ? "true" : "false");
+      });
+    });
+  });
+
+  video.addEventListener("ended", function () {
+    if (current < PARTS.length - 1) { show(current + 1, true); }
+  });
+
+  video.addEventListener("error", function () {
+    statusEl.textContent = "This video did not load. Refresh the page, or ask the person who shared it with you.";
+  });
+
+  function fromHash() {
+    var match = /^#part-([1-4])$/.exec(window.location.hash || "");
+    if (match) { show(Number(match[1]) - 1, false); }
+  }
+  window.addEventListener("hashchange", fromHash);
+  fromHash();
+})();
+</script>

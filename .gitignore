@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+tutorial-site/_preview.html
+.DS_Store
+Thumbs.db
